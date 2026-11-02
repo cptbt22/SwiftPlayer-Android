@@ -50,6 +50,15 @@ class EmbyPosterAdapter(
                 .centerCrop()
                 .into(binding.embyPoster)
 
+            // 播放进度条：有观看进度的影片在海报底边显示百分比（v2.5.2）
+            val percent = item.playedPercentage.toInt().coerceIn(0, 100)
+            if (percent > 0) {
+                binding.embyPosterProgress.visibility = android.view.View.VISIBLE
+                binding.embyPosterProgress.progress = percent
+            } else {
+                binding.embyPosterProgress.visibility = android.view.View.GONE
+            }
+
             binding.root.setOnClickListener { onClick(item) }
         }
 

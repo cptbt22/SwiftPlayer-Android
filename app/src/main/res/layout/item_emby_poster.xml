@@ -19,6 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
+            <!-- 海报：2:3 完整显示，文字不再叠在图上（v2.5.2 修复遮挡） -->
             <ImageView
                 android:id="@+id/embyPoster"
                 android:layout_width="0dp"
@@ -31,24 +32,32 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- 底部渐变遮罩，保证叠字可读 -->
-            <View
+            <!-- 播放进度条：叠加在海报底边（有进度时显示，v2.5.2） -->
+            <ProgressBar
+                android:id="@+id/embyPosterProgress"
+                style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:background="@drawable/bg_poster_scrim"
-                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_height="4dp"
+                android:layout_marginBottom="2dp"
+                android:max="100"
+                android:progressBackgroundTint="#66000000"
+                android:progressTint="@color/primary"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@id/embyPoster"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
-            <!-- 叠字区：标题 + 副标题 -->
+            <!-- 独立信息区：海报下方，不再叠在图上 -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:background="@color/surface"
                 android:orientation="vertical"
                 android:padding="8dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent">
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/embyPoster">
 
                 <TextView
                     android:id="@+id/embyPosterTitle"
@@ -57,11 +66,7 @@
                     android:ellipsize="end"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="2"
-                    android:shadowColor="#B3000000"
-                    android:shadowDx="0"
-                    android:shadowDy="1"
-                    android:shadowRadius="3"
-                    android:textColor="#FFFFFFFF"
+                    android:textColor="@color/on_surface"
                     android:textSize="12.5sp" />
 
                 <TextView
@@ -71,11 +76,7 @@
                     android:layout_marginTop="2dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:shadowColor="#99000000"
-                    android:shadowDx="0"
-                    android:shadowDy="1"
-                    android:shadowRadius="2"
-                    android:textColor="#BFFFFFFF"
+                    android:textColor="@color/on_surface_variant"
                     android:textSize="10.5sp" />
 
             </LinearLayout>

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
@@ -50,6 +51,8 @@ import org.json.JSONArray
 class PlayerActivity : AppCompatActivity() {
 
     companion object {
+        private const val PREFS_APP = "app_settings"
+        private const val KEY_ORIENTATION = "player_orientation"
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_FILE_SIZE = "extra_file_size"
         const val EXTRA_SOURCE_TYPE = "extra_source_type"
@@ -83,6 +86,10 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var controlsController: PlayerControlsController
     private lateinit var controlsRoot: View
     private var exoPlayer: ExoPlayer? = null
+
+    /** 屏幕方向模式（v2.5.2）：AUTO 跟随视频比例，可循环切换并持久化 */
+    private enum class OrientationMode { AUTO, LANDSCAPE, PORTRAIT }
+    private var orientationMode = OrientationMode.AUTO
 
     private val handler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(Dispatchers.Main + Job())
@@ -166,6 +173,7 @@ class PlayerActivity : AppCompatActivity() {
         setupPlayer()
         settingsHelper = PlayerSettingsHelper(this, binding.playerView, playerEngine)
         setupControls()
+        initOrientation()
         setupGestures()
         setupLockOverlay()
         setupSpeechToSubtitle()
@@ -181,6 +189,57 @@ class PlayerActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
+    // ---- 屏幕方向（v2.5.2，逻辑参考主流播放器三态循环） ----
+
+    /** 应用方向模式：读视频尺寸（AUTO）→ requestedOrientation，同时持久化与刷新图标 */
+    private fun applyOrientationMode(mode: OrientationMode, showToast: Boolean = true) {
+        orientationMode = mode
+        getSharedPreferences(PREFS_APP, MODE_PRIVATE).edit()
+            .putString(KEY_ORIENTATION, mode.name)
+            .apply()
+        if (::controlsController.isInitialized) {
+            controlsController.setOrientationIcon(
+                when (mode) {
+                    OrientationMode.AUTO -> R.drawable.ic_screen_rotation
+                    OrientationMode.LANDSCAPE -> R.drawable.ic_stay_current_landscape
+                    OrientationMode.PORTRAIT -> R.drawable.ic_stay_current_portrait
+                }
+            )
+        }
+        requestedOrientation = when (mode) {
+            OrientationMode.LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            OrientationMode.PORTRAIT -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            OrientationMode.AUTO -> {
+                val vs = exoPlayer?.videoSize
+                if (vs != null && vs.width > 0 && vs.height > 0 && vs.height > vs.width) {
+                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+                } else {
+                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                }
+            }
+        }
+        if (showToast) {
+            val label = when (mode) {
+                OrientationMode.AUTO -> "自动（跟随视频）"
+                OrientationMode.LANDSCAPE -> "横屏"
+                OrientationMode.PORTRAIT -> "竖屏"
+            }
+            Toast.makeText(this, "方向: $label", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** 恢复上次的方向模式（controlsController 就绪后调用） */
+    private fun initOrientation() {
+        val saved = getSharedPreferences(PREFS_APP, MODE_PRIVATE)
+            .getString(KEY_ORIENTATION, OrientationMode.AUTO.name) ?: OrientationMode.AUTO.name
+        val mode = try {
+            OrientationMode.valueOf(saved)
+        } catch (_: Exception) {
+            OrientationMode.AUTO
+        }
+        applyOrientationMode(mode, showToast = false)
+    }
+
     private fun setupPlayer() {
         playerEngine = PlayerEngine(this)
         exoPlayer = playerEngine.create()
@@ -191,6 +250,13 @@ class PlayerActivity : AppCompatActivity() {
         thumbnailExtractor = ThumbnailExtractor(this)
 
         playerEngine.setListener(object : Player.Listener {
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                // AUTO 模式下跟随视频宽高比：竖屏视频竖屏全屏，横屏视频横屏全屏
+                if (orientationMode == OrientationMode.AUTO) {
+                    applyOrientationMode(OrientationMode.AUTO, showToast = false)
+                }
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
                     Player.STATE_BUFFERING -> {
@@ -302,6 +368,16 @@ class PlayerActivity : AppCompatActivity() {
                 override fun onZoom() {
                     val label = settingsHelper.cycleZoomMode()
                     Toast.makeText(this@PlayerActivity, "画面: $label", Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onOrientationCycle() {
+                    if (settingsHelper.isLocked) return
+                    val next = when (orientationMode) {
+                        OrientationMode.AUTO -> OrientationMode.LANDSCAPE
+                        OrientationMode.LANDSCAPE -> OrientationMode.PORTRAIT
+                        OrientationMode.PORTRAIT -> OrientationMode.AUTO
+                    }
+                    applyOrientationMode(next)
                 }
 
                 override fun onScreenshot() {

@@ -100,6 +100,15 @@
     <string name="emby_favorite_failed">收藏失败</string>
     <string name="emby_my_favorites">我的收藏</string>
     <string name="emby_favorites_empty">暂无收藏影片</string>
+
+    <!-- Emby 播放历史 / 继续观看（v2.5.2） -->
+    <string name="emby_history">继续观看</string>
+    <string name="emby_history_hint">播放过的影片与进度，一键续播</string>
+    <string name="emby_history_empty">暂无播放记录：看完或刚开始的影片不会出现在这里</string>
+    <string name="menu_settings">设置</string>
+    <string name="settings_title">设置</string>
+    <string name="settings_show_history">在 Emby 页显示「继续观看」</string>
+    <string name="settings_show_history_hint">关闭后 Emby 媒体库页不再显示播放历史入口</string>
     <string name="emby_similar">相似影片</string>
     <string name="emby_search">搜索影片</string>
     <string name="emby_search_hint">搜索影片…</string>

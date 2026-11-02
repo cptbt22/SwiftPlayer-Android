@@ -78,6 +78,8 @@ class EmbyFragment : Fragment() {
     companion object {
         private const val GRID_COLUMNS = 3
         private const val PERSON_COLUMNS = 4
+        const val PREFS_APP = "app_settings"
+        const val KEY_SHOW_HISTORY = "emby_show_history"
     }
 
     override fun onCreateView(
@@ -105,6 +107,8 @@ class EmbyFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        // 设置里切换「继续观看」开关后返回时立即生效
+        if (currentState == State.LIBRARIES) applyState()
         if (!refreshDetailOnResume) return
         refreshDetailOnResume = false
         val item = currentDetailItem ?: return
@@ -161,6 +165,7 @@ class EmbyFragment : Fragment() {
         binding.btnDetailDelete.setOnClickListener { confirmDeleteItem() }
         binding.detailFavorite.setOnClickListener { toggleFavorite() }
         binding.favoritesRow.setOnClickListener { loadFavorites() }
+        binding.historyRow.setOnClickListener { loadHistory() }
         binding.searchRow.setOnClickListener { showSearchDialog() }
         binding.peopleRow.setOnClickListener { loadPeople() }
         binding.tagsRow.setOnClickListener { loadTags() }
@@ -207,6 +212,9 @@ class EmbyFragment : Fragment() {
     private fun applyState() {
         binding.serverRecycler.visibility = if (currentState == State.SERVERS) View.VISIBLE else View.GONE
         binding.libraryContainer.visibility = if (currentState == State.LIBRARIES) View.VISIBLE else View.GONE
+        // 继续观看入口：仅 LIBRARIES 态且开关开启时显示（设置页可关闭，v2.5.2）
+        binding.historyRow.visibility =
+            if (currentState == State.LIBRARIES && historyEnabled()) View.VISIBLE else View.GONE
         binding.posterRecycler.visibility = if (currentState == State.POSTERS) View.VISIBLE else View.GONE
         binding.detailScroll.visibility = if (currentState == State.DETAIL) View.VISIBLE else View.GONE
         binding.peopleContainer.visibility = if (currentState == State.PEOPLE) View.VISIBLE else View.GONE
@@ -272,6 +280,35 @@ class EmbyFragment : Fragment() {
                 applyState()
                 posterAdapter.submitList(items)
                 if (items.isEmpty()) showEmpty(R.string.emby_no_items)
+            }.onFailure { e ->
+                hideLoading()
+                toast(e.message ?: getString(R.string.emby_err_invalid))
+            }
+        }
+    }
+
+    // ---- 播放历史 / 继续观看（v2.5.2） ----
+
+    /** 「继续观看」开关（设置页可关闭）；默认开启 */
+    private fun historyEnabled(): Boolean =
+        requireContext().getSharedPreferences(PREFS_APP, android.content.Context.MODE_PRIVATE)
+            .getBoolean(KEY_SHOW_HISTORY, true)
+
+    /** 播放历史：服务器侧 IsResumable 过滤（已开始未看完），最近播放优先 */
+    private fun loadHistory() {
+        val server = currentServer ?: return
+        showLoading()
+        lifecycleScope.launch {
+            val result = repository.resumable(server)
+            if (!isAdded || _binding == null) return@launch
+            result.onSuccess { list ->
+                hideLoading()
+                lastItems = list
+                postersFrom = PostersOrigin.LIBRARIES
+                currentState = State.POSTERS
+                applyState()
+                posterAdapter.submitList(list)
+                if (list.isEmpty()) showEmpty(R.string.emby_history_empty)
             }.onFailure { e ->
                 hideLoading()
                 toast(e.message ?: getString(R.string.emby_err_invalid))
@@ -495,7 +532,7 @@ class EmbyFragment : Fragment() {
         }
     }
 
-    /** 某标签的影片：直接复用已拉取的全库条目做本地过滤，不再请求服务器 */
+    /** 某类型的影片：复用已拉取的全库条目本地过滤（★ v2.5.2 修复：聚合主源是 Genres，过滤须同步匹配 Genres，Tags 并集兜底） */
     private fun loadTagItems(tag: EmbyTag) {
         val cached = repository.cachedTagItems(currentServer?.id.orEmpty())
         if (cached == null) {
@@ -507,7 +544,7 @@ class EmbyFragment : Fragment() {
                 if (!isAdded || _binding == null) return@launch
                 result.onSuccess { items ->
                     hideLoading()
-                    showTagItems(items.filter { it.tags.contains(tag.name) }, tag.name)
+                    showTagItems(filterByCategory(items, tag.name), tag.name)
                 }.onFailure { e ->
                     hideLoading()
                     toast(e.message ?: getString(R.string.emby_err_invalid))
@@ -515,8 +552,11 @@ class EmbyFragment : Fragment() {
             }
             return
         }
-        showTagItems(cached.filter { it.tags.contains(tag.name) }, tag.name)
+        showTagItems(filterByCategory(cached, tag.name), tag.name)
     }
+
+    private fun filterByCategory(items: List<EmbyItem>, name: String): List<EmbyItem> =
+        items.filter { it.genres.contains(name) || it.tags.contains(name) }
 
     private fun showTagItems(items: List<EmbyItem>, tag: String) {
         lastItems = items

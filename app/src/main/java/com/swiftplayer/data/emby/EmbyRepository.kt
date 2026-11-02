@@ -107,6 +107,12 @@ class EmbyRepository(private val api: EmbyApi, private val auth: EmbyAuthManager
         return api.getFavoriteItems(base, server.accessToken, server.userId)
     }
 
+    /** 继续观看（播放历史）：服务器侧 IsResumable 过滤，最近播放优先（v2.5.2） */
+    suspend fun resumable(server: EmbyServer): Result<List<EmbyItem>> {
+        val base = resolveBaseUrl(server)
+        return api.getResumableItems(base, server.accessToken, server.userId)
+    }
+
     /** 相似影片推荐 */
     suspend fun similar(server: EmbyServer, itemId: String): Result<List<EmbyItem>> {
         val base = resolveBaseUrl(server)

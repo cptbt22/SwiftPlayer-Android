@@ -58,6 +58,75 @@
 
             </LinearLayout>
 
+            <!-- 播放历史 / 继续观看入口（v2.5.2，可在设置中关闭） -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/historyRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="10dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:rippleColor="@color/card_ripple">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_play_circle"
+                        app:tint="@color/primary" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:fontFamily="sans-serif-medium"
+                            android:maxLines="1"
+                            android:text="@string/emby_history"
+                            android:textColor="@color/on_surface"
+                            android:textSize="15sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@string/emby_history_hint"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:alpha="0.25"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/on_surface_variant" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- 我的收藏入口（固定 view） -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/favoritesRow"

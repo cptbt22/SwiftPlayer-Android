@@ -301,6 +301,30 @@ class EmbyApi(private val deviceId: String) {
         requestJson(url, token).map { obj -> parseItems(obj.optJSONArray("Items")) }
     }
 
+    /**
+     * 继续观看（播放历史，v2.5.2）：`Filters=IsResumable`——
+     * 服务器侧筛选「已开始且未看完」的影片，按最近播放排序；
+     * UserData.PlayedPercentage 直接用于海报进度条。
+     */
+    suspend fun getResumableItems(
+        baseUrl: String,
+        token: String,
+        userId: String,
+        limit: Int = 30
+    ): Result<List<EmbyItem>> = withContext(Dispatchers.IO) {
+        val fields = "Overview,RunTimeTicks,ProductionYear,CommunityRating,ImageTags,UserData"
+        val url = "${normalize(baseUrl)}/Users/$userId/Items" +
+                "?Filters=IsResumable" +
+                "&Recursive=true" +
+                "&IncludeItemTypes=Movie,Episode" +
+                "&Fields=$fields" +
+                "&ImageTypeLimit=1" +
+                "&SortBy=DatePlayed" +
+                "&SortOrder=Descending" +
+                "&Limit=$limit"
+        requestJson(url, token).map { obj -> parseItems(obj.optJSONArray("Items")) }
+    }
+
     /** 相似影片推荐：`{base}/Items/{itemId}/Similar?UserId={uid}&Limit=12`（返回 {Items:[...]}） */
     suspend fun getSimilar(
         baseUrl: String,

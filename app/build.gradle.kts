@@ -6,13 +6,10 @@ plugins {
 }
 
 /**
- * Release signing (optional):
- * - Place your own `swiftplayer-release.jks` at the project root (NEVER commit it);
- * - Provide credentials via environment variables SP_STORE_PASSWORD / SP_KEY_ALIAS /
- *   SP_KEY_PASSWORD, or via local.properties keys sp.store.password / sp.key.alias /
- *   sp.key.password (local.properties is git-ignored);
- * - Without a keystore, release builds fall back to the debug signing config so the
- *   project still builds out of the box for local testing.
+ * Release signing（v2.5.1 开源化改造，与公开仓库一致）：
+ * 凭据从环境变量（SP_STORE_PASSWORD/SP_KEY_ALIAS/SP_KEY_PASSWORD）
+ * 或 local.properties（sp.store.password/sp.key.alias/sp.key.password）读取，
+ * 明文不再入库；无 jks 时回退 debug 签名。
  */
 val releaseKeystoreFile = rootProject.file("swiftplayer-release.jks")
 val signingProps = Properties().apply {
@@ -42,19 +39,15 @@ android {
         applicationId = "com.swiftplayer"
         minSdk = 24
         targetSdk = 35
-        versionCode = 10
-        versionName = "2.5.1"
+        versionCode = 11
+        versionName = "2.5.2"
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = if (releaseKeystoreFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = if (releaseKeystoreFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

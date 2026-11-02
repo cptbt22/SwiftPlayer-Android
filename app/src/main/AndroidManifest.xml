@@ -59,7 +59,7 @@
             android:name=".ui.player.PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
             android:theme="@style/Theme.SwiftPlayer.Player"
-            android:screenOrientation="sensorLandscape" />
+            />
 
         <service
             android:name=".player.AudioCaptureService"

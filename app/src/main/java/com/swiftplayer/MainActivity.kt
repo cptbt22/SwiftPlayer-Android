@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -196,6 +197,10 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, R.string.menu_refresh, Toast.LENGTH_SHORT).show()
                     true
                 }
+                R.id.menu_settings -> {
+                    showSettingsDialog()
+                    true
+                }
                 R.id.menu_about -> {
                     showAboutDialog()
                     true
@@ -239,6 +244,45 @@ class MainActivity : AppCompatActivity() {
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.about_title)
             .setMessage(message)
+            .setPositiveButton("确定", null)
+            .show()
+    }
+
+    /**
+     * 设置（v2.5.2）：轻量对话框 + 开关。
+     * 「继续观看」入口开关即时生效——Emby 页 onResume 会重读开关并刷新。
+     */
+    private fun showSettingsDialog() {
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 8)
+        }
+        val appPrefs = getSharedPreferences(
+            com.swiftplayer.ui.home.fragments.EmbyFragment.PREFS_APP,
+            android.content.Context.MODE_PRIVATE
+        )
+        val historySwitch = com.google.android.material.materialswitch.MaterialSwitch(this).apply {
+            text = getString(R.string.settings_show_history)
+            isChecked = appPrefs.getBoolean(
+                com.swiftplayer.ui.home.fragments.EmbyFragment.KEY_SHOW_HISTORY, true
+            )
+            setOnCheckedChangeListener { _, checked ->
+                appPrefs.edit()
+                    .putBoolean(com.swiftplayer.ui.home.fragments.EmbyFragment.KEY_SHOW_HISTORY, checked)
+                    .apply()
+            }
+        }
+        val hint = android.widget.TextView(this).apply {
+            text = getString(R.string.settings_show_history_hint)
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.on_surface_variant))
+        }
+        container.addView(historySwitch)
+        container.addView(hint)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.settings_title)
+            .setView(container)
             .setPositiveButton("确定", null)
             .show()
     }

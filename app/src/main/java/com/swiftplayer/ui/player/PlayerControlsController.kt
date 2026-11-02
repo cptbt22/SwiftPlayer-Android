@@ -46,6 +46,7 @@ class PlayerControlsController(
         fun onAudioTrack()
         fun onSpeechSubtitle()
         fun onZoom()
+        fun onOrientationCycle()
         fun onScreenshot()
         fun onLock()
         fun onInfo()
@@ -85,6 +86,7 @@ class PlayerControlsController(
     private val audioBtn: ImageButton = root.findViewById(R.id.btn_audio_track)
     private val speechBtn: ImageButton = root.findViewById(R.id.btn_speech_subtitle)
     private val zoomBtn: ImageButton = root.findViewById(R.id.btn_zoom)
+    private val orientationBtn: ImageButton = root.findViewById(R.id.btn_orientation)
     private val screenshotBtn: ImageButton = root.findViewById(R.id.btn_screenshot)
     private val lockBtn: ImageButton = root.findViewById(R.id.btn_lock)
     private val infoBtn: ImageButton = root.findViewById(R.id.btn_info)
@@ -156,6 +158,7 @@ class PlayerControlsController(
         audioBtn.setOnClickListener { onInteract(); listener.onAudioTrack() }
         speechBtn.setOnClickListener { onInteract(); listener.onSpeechSubtitle() }
         zoomBtn.setOnClickListener { onInteract(); listener.onZoom() }
+        orientationBtn.setOnClickListener { onInteract(); listener.onOrientationCycle() }
         screenshotBtn.setOnClickListener { onInteract(); listener.onScreenshot() }
         lockBtn.setOnClickListener { onInteract(); listener.onLock() }
         infoBtn.setOnClickListener { onInteract(); listener.onInfo() }
@@ -206,6 +209,11 @@ class PlayerControlsController(
 
     fun setLockButtonLocked(locked: Boolean) {
         lockBtn.setImageResource(if (locked) R.drawable.ic_lock else R.drawable.ic_lock_open)
+    }
+
+    /** 方向模式图标：自动跟随视频 / 锁定横屏 / 锁定竖屏（v2.5.2） */
+    fun setOrientationIcon(resId: Int) {
+        orientationBtn.setImageResource(resId)
     }
 
     fun show() {
