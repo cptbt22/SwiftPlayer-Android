@@ -1,0 +1,17 @@
+build/
+.gradle/
+.kotlin/
+local.properties
+*.log
+hs_err_*
+replay_*
+.idea/
+*.apk
+captures/
+.externalNativeBuild/
+.cxx/
+
+# signing keys & secrets
+*.jks
+*.keystore
+keystore.properties

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <!-- 顶部栏：代码侧写入 top inset（状态栏 + 挖孔），避免被状态栏/摄像头遮挡 -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_home_header"
+        app:elevation="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- 品牌标题行 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp">
+
+                <FrameLayout
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@drawable/bg_home_logo">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_play_arrow"
+                        app:tint="@android:color/white" />
+
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="@string/app_section_media"
+                        android:textColor="@color/on_surface"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:text="@string/home_subtitle"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnMenu"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/menu_about"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_more_vert"
+                    app:tint="@color/on_surface_dim" />
+
+            </LinearLayout>
+
+            <!-- 分段胶囊 Tab：容器 + 选中 pill，层次更清晰 -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tabLayout"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_tab_container"
+                android:padding="4dp"
+                app:tabMode="fixed"
+                app:tabGravity="fill"
+                app:tabIndicatorHeight="0dp"
+                app:tabSelectedTextColor="@color/primary"
+                app:tabTextColor="@color/on_surface_variant"
+                app:tabRippleColor="@android:color/transparent"
+                app:tabBackground="@drawable/tab_pill_bg"
+                app:tabTextAppearance="@style/TabTextAppearance" />
+
+            <!-- 极淡分隔线，去掉硬线感 -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="@color/divider_soft" />
+
+        </LinearLayout>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- 内容容器：代码侧写入 bottom/left/right inset，防止列表与 FAB 被导航栏/手势条遮挡 -->
+    <FrameLayout
+        android:id="@+id/pagerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/viewPager"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </FrameLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
