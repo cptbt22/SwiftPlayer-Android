@@ -11,10 +11,26 @@
 ![Kotlin](https://img.shields.io/badge/Kotlin-1.9+-purple)
 ![Player](https://img.shields.io/badge/Engine-Media3%20%2F%20ExoPlayer-orange)
 ![Emby](https://img.shields.io/badge/Emby-%E5%8E%9F%E7%94%9F%20API%20%E5%AE%A2%E6%88%B7%E7%AB%AF-teal)
+[![Download](https://img.shields.io/github/v/release/cptbt22/SwiftPlayer-Android?label=Download&color=success)](https://github.com/cptbt22/SwiftPlayer-Android/releases/latest)
 
 ![SwiftPlayer 演示：横拖 seek 松手才跳转 · 连续 seek 不转圈 · 长按倍速](docs/demo.gif)
 
 </div>
+
+---
+
+## 📥 下载安装
+
+**直接装，不用编译。**
+
+| 版本 | 大小 | 要求 | 下载 |
+|---|---|---|---|
+| **v2.5.2**（最新） | 5.8 MB | Android 7.0+ | **[SwiftPlayer-v2.5.2.apk](https://github.com/cptbt22/SwiftPlayer-Android/releases/download/v2.5.2/SwiftPlayer-v2.5.2.apk)** |
+
+- 各版本**签名一致**，后续版本可直接覆盖升级，无需卸载。
+- 首次安装系统会提示「允许安装未知来源应用」，授权即可。
+- 历史版本与 SHA-256 校验值见 **[Releases](https://github.com/cptbt22/SwiftPlayer-Android/releases)**；国内网络若下载缓慢，可稍后重试或更换网络。
+- 想自己编译或改代码 → 见下方 [构建](#构建)。
 
 ---
 
