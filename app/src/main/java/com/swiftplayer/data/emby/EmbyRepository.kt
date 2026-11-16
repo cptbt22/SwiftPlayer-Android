@@ -26,6 +26,9 @@ class EmbyRepository(private val api: EmbyApi, private val auth: EmbyAuthManager
     /** 测试地址可达性（不落库） */
     suspend fun ping(baseUrl: String): Result<Unit> = api.ping(baseUrl)
 
+    /** 连接诊断（DNS / TCP / HTTP 分层结果） */
+    suspend fun diagnose(baseUrl: String): String = api.diagnose(baseUrl)
+
     /** 登录并持久化服务器（lanUrl 可选：局域网地址；在家优先走它） */
     suspend fun login(
         baseUrl: String,

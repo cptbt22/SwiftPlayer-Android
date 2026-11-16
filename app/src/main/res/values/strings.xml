@@ -134,6 +134,11 @@
     <string name="smb_no_shares_found">未能识别可访问的共享：请在飞牛「文件管理 → SMB」确认已共享目录，或手动填写共享名称</string>
     <string name="smb_connected_share">已连接共享：%1$s</string>
     <string name="smb_dir_empty">此目录下没有视频文件</string>
+    <string name="smb_login_hint">飞牛 NAS 通常不允许匿名访问，请填写系统用户名和密码；凭据只会加密保存在本机。</string>
+    <string name="smb_address_required">请输入 SMB 服务器地址</string>
+    <string name="smb_connect_title">连接 SMB 服务器</string>
+    <string name="smb_credentials_required">请输入飞牛 NAS 的系统用户名和密码；如果服务器明确允许匿名访问，可点“匿名连接”。</string>
+    <string name="smb_connect_anonymous">匿名连接</string>
 
     <!-- 空态 -->
     <string name="empty_no_videos">此文件夹内没有视频</string>

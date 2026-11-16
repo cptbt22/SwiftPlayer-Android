@@ -39,8 +39,8 @@ android {
         applicationId = "com.swiftplayer"
         minSdk = 24
         targetSdk = 35
-        versionCode = 11
-        versionName = "2.5.2"
+        versionCode = 15
+        versionName = "2.5.6"
     }
 
     buildTypes {
@@ -97,6 +97,7 @@ dependencies {
 
     // Networking (Emby)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:4.12.0")
 
     // SMB/NAS
     implementation("com.hierynomus:smbj:0.13.0")

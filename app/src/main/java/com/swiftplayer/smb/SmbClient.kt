@@ -48,8 +48,8 @@ class SmbClient {
             val newClient = SMBClient(config)
             client = newClient
 
-            val (host, port) = parseHostPort(server.address)
-            val conn = newClient.connect(host, port)
+            val endpoint = SmbAddresses.parse(server.address)
+            val conn = newClient.connect(endpoint.host, endpoint.port)
             connection = conn
             if (!conn.isConnected) {
                 throw SmbException("无法建立连接，请检查地址")
@@ -190,6 +190,7 @@ class SmbClient {
             is SocketTimeoutException -> SmbException(TIMEOUT_MSG)
             is SMBApiException -> when (e.statusCode) {
                 STATUS_LOGON_FAILURE,
+                STATUS_NO_SUCH_USER,
                 STATUS_ACCOUNT_DISABLED,
                 STATUS_PASSWORD_EXPIRED,
                 STATUS_ACCOUNT_LOCKED_OUT -> SmbException(AUTH_MSG)
@@ -221,16 +222,7 @@ class SmbClient {
     private fun shortMessage(message: String?): String =
         message.orEmpty().replace("\n", " ").take(140).ifEmpty { "未知错误" }
 
-    private fun parseHostPort(address: String): Pair<String, Int> {
-        val cleaned = address.removePrefix("smb://").removeSuffix("/")
-        val host = cleaned.substringBefore(':').ifEmpty { cleaned }
-        val port = cleaned.substringAfter(':', "").toIntOrNull() ?: DEFAULT_SMB_PORT
-        return host to port
-    }
-
     companion object {
-        private const val DEFAULT_SMB_PORT = 445
-
         private val VIDEO_EXTENSIONS = setOf(
             "mp4", "mkv", "avi", "mov", "webm", "flv", "ts", "3gp",
             "wmv", "asf", "ogv", "m4v", "mpg", "mpeg", "vob"
@@ -254,7 +246,8 @@ class SmbClient {
             "未能识别可访问的共享：请在飞牛「文件管理 → SMB」确认已共享目录，或手动填写共享名称"
 
         // NTSTATUS（与 NtStatus 枚举值一致；用常量避免跨版本 API 差异）
-        private const val STATUS_LOGON_FAILURE = 0xC0000064L
+        private const val STATUS_LOGON_FAILURE = 0xC000006DL
+        private const val STATUS_NO_SUCH_USER = 0xC0000064L
         private const val STATUS_ACCOUNT_LOCKED_OUT = 0xC0000234L
         private const val STATUS_ACCOUNT_DISABLED = 0xC0000072L
         private const val STATUS_PASSWORD_EXPIRED = 0xC0000071L

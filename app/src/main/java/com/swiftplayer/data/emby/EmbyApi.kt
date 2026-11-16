@@ -3,13 +3,25 @@ package com.swiftplayer.data.emby
 import com.swiftplayer.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Dns
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.dnsoverhttps.DnsOverHttps
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import java.net.ConnectException
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.net.SocketTimeoutException
+import java.net.URI
+import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
 /** Emby 请求异常（携带面向用户的中文文案） */
@@ -25,7 +37,44 @@ class EmbyApiException(message: String) : Exception(message)
  */
 class EmbyApi(private val deviceId: String) {
 
+    /** 引导客户端：只用于连接 DoH 服务器，不含自定义 DNS，避免递归 */
+    private val bootstrapClient = OkHttpClient.Builder()
+        .connectTimeout(6, TimeUnit.SECONDS)
+        .readTimeout(6, TimeUnit.SECONDS)
+        .build()
+
+    /**
+     * DoH（DNS over HTTPS，阿里公共 DNS）。
+     * bootstrapDnsHosts 使用 IP 字面量引导，因此系统 DNS 完全解析不出域名时依然可用。
+     */
+    private val dohDns: DnsOverHttps = DnsOverHttps.Builder()
+        .client(bootstrapClient)
+        .url("https://dns.alidns.com/dns-query".toHttpUrl())
+        .bootstrapDnsHosts(
+            InetAddress.getByName("223.5.5.5"),
+            InetAddress.getByName("223.6.6.6")
+        )
+        .build()
+
+    /** 系统 DNS 优先；解析失败或返回空时自动回退 DoH */
+    private val smartDns = object : Dns {
+        override fun lookup(hostname: String): List<InetAddress> {
+            val system = try {
+                Dns.SYSTEM.lookup(hostname)
+            } catch (_: Exception) {
+                emptyList()
+            }
+            if (system.isNotEmpty()) return system
+            return try {
+                dohDns.lookup(hostname)
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+    }
+
     private val client = OkHttpClient.Builder()
+        .dns(smartDns)
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
@@ -46,6 +95,118 @@ class EmbyApi(private val deviceId: String) {
 
     private fun authHeaderValue(): String =
         "MediaBrowser Client=\"SwiftPlayer\", Device=\"Android\", DeviceId=\"$deviceId\", Version=\"${BuildConfig.VERSION_NAME}\""
+
+    /**
+     * 连接诊断：把 DNS / TCP / HTTP 各层实测结果拼成可读文本。
+     * 供「测试连接」失败时展示，避免所有网络异常都被压成一句「检查地址与网络」。
+     */
+    suspend fun diagnose(baseUrl: String): String = withContext(Dispatchers.IO) {
+        val sb = StringBuilder()
+        val normalized = normalize(baseUrl)
+        sb.append("地址  ").append(normalized).append('\n')
+
+        val uri = try {
+            URI(normalized)
+        } catch (e: Exception) {
+            sb.append("地址格式错误: ").append(e.message).append('\n')
+            return@withContext sb.toString()
+        }
+        val host = uri.host?.removeSurrounding("[", "]")
+        if (host.isNullOrEmpty()) {
+            sb.append("无法从地址中解析出主机名").append('\n')
+            return@withContext sb.toString()
+        }
+        val port = if (uri.port > 0) uri.port else if (normalized.startsWith("https")) 443 else 8096
+        sb.append("主机  ").append(host).append("    端口  ").append(port).append('\n')
+
+        var addrs: List<InetAddress> = try {
+            InetAddress.getAllByName(host).toList()
+        } catch (e: Exception) {
+            sb.append("系统 DNS 失败  [").append(e.javaClass.simpleName).append("] ").append(e.message).append('\n')
+            emptyList()
+        }
+
+        if (addrs.isEmpty()) {
+            sb.append("系统 DNS 无结果，尝试 DoH (alidns) …").append('\n')
+            addrs = try {
+                dohDns.lookup(host)
+            } catch (e: Exception) {
+                sb.append("DoH 解析失败  [").append(e.javaClass.simpleName).append("] ").append(e.message).append('\n')
+                emptyList()
+            }
+            if (addrs.isNotEmpty()) {
+                sb.append("DoH 解析成功  ")
+                    .append(addrs.joinToString(", ") { it.hostAddress ?: "?" }).append('\n')
+                sb.append("→ 系统 DNS 不可用，app 已自动改用 DoH 解析。").append('\n')
+            }
+        }
+
+        val v4 = addrs.filter { it is Inet4Address }
+        val v6 = addrs.filter { it is Inet6Address }
+        sb.append("A (IPv4)      ")
+            .append(if (v4.isEmpty()) "无" else v4.joinToString(", ") { it.hostAddress ?: "?" }).append('\n')
+        sb.append("AAAA (IPv6)   ")
+            .append(if (v6.isEmpty()) "无" else v6.joinToString(", ") { it.hostAddress ?: "?" }).append('\n')
+
+        var tcpOk = false
+        for (a in addrs) {
+            val kind = if (a is Inet6Address) "IPv6" else "IPv4"
+            val begin = System.currentTimeMillis()
+            val res = try {
+                Socket().use { s ->
+                    s.connect(InetSocketAddress(a, port), 4000)
+                    tcpOk = true
+                    "成功"
+                }
+            } catch (e: Exception) {
+                "失败 [" + e.javaClass.simpleName + "] " + e.message
+            }
+            sb.append("TCP ").append(kind).append(' ').append(a.hostAddress).append(':').append(port)
+                .append("  → ").append(res)
+                .append("  (").append(System.currentTimeMillis() - begin).append("ms)").append('\n')
+        }
+
+        val begin = System.currentTimeMillis()
+        try {
+            val request = Request.Builder()
+                .url("$normalized/System/Info/Public")
+                .header("X-Emby-Authorization", authHeaderValue())
+                .build()
+            client.newCall(request).execute().use { resp ->
+                sb.append("HTTP  ").append(resp.code)
+                    .append("  (").append(System.currentTimeMillis() - begin).append("ms)").append('\n')
+                sb.append("结论  ")
+                    .append(if (resp.isSuccessful) "服务器可达，链路正常" else "端口可达但响应异常")
+                    .append('\n')
+            }
+        } catch (e: Exception) {
+            sb.append("HTTP  请求失败 [").append(e.javaClass.simpleName).append("] ").append(e.message).append('\n')
+            val advice = when (e) {
+                is UnknownHostException -> "域名解析失败，检查 DNS 或该域名是否仅支持 IPv6"
+                is SocketTimeoutException -> "TCP 超时，地址解析到了却连不上：多为 IPv6 无出口、防火墙拦截或端口未放行"
+                is ConnectException -> "连接被拒绝，端口未开放"
+                is IOException -> "网络不可达，检查当前网络是否支持 IPv6"
+                else -> "未知错误"
+            }
+            sb.append("结论  ").append(advice).append('\n')
+        }
+
+        if (!tcpOk && addrs.isNotEmpty()) {
+            sb.append("提示  所有地址的 TCP 均失败，当前网络到 NAS 的通路不通。").append('\n')
+        }
+        sb.toString()
+    }
+
+    /** 把网络异常翻译成能指向具体环节的话术，不再一律「检查地址与网络」 */
+    private fun networkErrorMessage(e: Exception): String {
+        val detail = e.message ?: e.javaClass.simpleName
+        return when (e) {
+            is UnknownHostException -> "域名解析失败（$detail）—— 该域名可能只有 IPv6 记录，确认当前网络能解析它"
+            is SocketTimeoutException -> "连接超时（$detail）—— 地址解析到了但没有响应，多为 IPv6 无出口或端口被拦"
+            is ConnectException -> "连接被拒绝（$detail）—— 端口未开放"
+            else -> "网络错误 ${e.javaClass.simpleName}：$detail"
+        }
+    }
 
     /**
      * 快速可达性探测（短超时）：供「局域网地址优选」使用。
@@ -83,8 +244,8 @@ class EmbyApi(private val deviceId: String) {
                     Result.failure(EmbyApiException("该地址不是有效的 Emby 服务器"))
                 }
             }
-        } catch (_: IOException) {
-            Result.failure(EmbyApiException("无法连接到服务器，请检查地址与网络"))
+        } catch (e: IOException) {
+            Result.failure(EmbyApiException(networkErrorMessage(e)))
         } catch (e: Exception) {
             Result.failure(EmbyApiException(e.message ?: "未知错误"))
         }
@@ -132,8 +293,8 @@ class EmbyApi(private val deviceId: String) {
                     }
                 }
             }
-        } catch (_: IOException) {
-            Result.failure(EmbyApiException("无法连接到服务器，请检查地址与网络"))
+        } catch (e: IOException) {
+            Result.failure(EmbyApiException(networkErrorMessage(e)))
         } catch (e: Exception) {
             Result.failure(EmbyApiException(e.message ?: "未知错误"))
         }
@@ -276,8 +437,8 @@ class EmbyApi(private val deviceId: String) {
                     else -> Result.failure(EmbyApiException("收藏操作失败：HTTP ${resp.code}"))
                 }
             }
-        } catch (_: IOException) {
-            Result.failure(EmbyApiException("无法连接到服务器，请检查地址与网络"))
+        } catch (e: IOException) {
+            Result.failure(EmbyApiException(networkErrorMessage(e)))
         } catch (e: Exception) {
             Result.failure(EmbyApiException(e.message ?: "未知错误"))
         }
@@ -439,8 +600,8 @@ class EmbyApi(private val deviceId: String) {
                     else -> Result.failure(EmbyApiException("删除失败：HTTP ${resp.code}"))
                 }
             }
-        } catch (_: IOException) {
-            Result.failure(EmbyApiException("无法连接到服务器，请检查地址与网络"))
+        } catch (e: IOException) {
+            Result.failure(EmbyApiException(networkErrorMessage(e)))
         } catch (e: Exception) {
             Result.failure(EmbyApiException(e.message ?: "未知错误"))
         }
@@ -525,8 +686,8 @@ class EmbyApi(private val deviceId: String) {
                     else -> parseOrFail(text)
                 }
             }
-        } catch (_: IOException) {
-            Result.failure(EmbyApiException("无法连接到服务器，请检查地址与网络"))
+        } catch (e: IOException) {
+            Result.failure(EmbyApiException(networkErrorMessage(e)))
         } catch (e: Exception) {
             Result.failure(EmbyApiException(e.message ?: "未知错误"))
         }

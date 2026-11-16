@@ -25,7 +25,8 @@
 
 | 版本 | 大小 | 要求 | 下载 |
 |---|---|---|---|
-| **v2.5.2**（最新） | 5.8 MB | Android 7.0+ | **[SwiftPlayer-v2.5.2.apk](https://github.com/cptbt22/SwiftPlayer-Android/releases/download/v2.5.2/SwiftPlayer-v2.5.2.apk)** |
+| **v2.5.6**（最新） | 5.8 MB | Android 7.0+ | **[SwiftPlayer-v2.5.6.apk](https://github.com/cptbt22/SwiftPlayer-Android/releases/download/v2.5.6/SwiftPlayer-v2.5.6.apk)** |
+| v2.5.2 | 5.8 MB | Android 7.0+ | [SwiftPlayer-v2.5.2.apk](https://github.com/cptbt22/SwiftPlayer-Android/releases/download/v2.5.2/SwiftPlayer-v2.5.2.apk) |
 
 - 各版本**签名一致**，后续版本可直接覆盖升级，无需卸载。
 - 首次安装系统会提示「允许安装未知来源应用」，授权即可。
@@ -98,6 +99,8 @@ SwiftPlayer 用 **Kotlin + Media3 原生实现**，直接对症：**拖动进度
 - **外挂字幕**：自动解析外挂文本字幕轨，一键 side-load
 - **管理能力**：管理员账号可直接删除影片（库条目 + 媒体文件 + 刮削文件）
 - **局域网优选**：外网 + 内网双地址，在家自动切内网直连——快进不转圈
+- **内建 DoH 解析**：系统 DNS 给不出地址时自动改用 DNS over HTTPS（阿里公共 DNS，IP 直连引导），只暴露 IPv6 的自建域名在部分网络上也能解析
+- **连接诊断**：连不上时弹出分层结果——域名解析到的 A/AAAA 记录、每个地址的 TCP 探测耗时、HTTP 状态码，一眼看清卡在哪一层
 
 ### 🗣️ 语音转字幕（无字幕外语片救星）
 

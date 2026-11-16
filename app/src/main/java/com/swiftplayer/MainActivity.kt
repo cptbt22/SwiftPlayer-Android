@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -123,8 +124,22 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.tab_network),
             getString(R.string.tab_emby)
         )
+        val tabIcons = arrayOf(
+            R.drawable.ic_tab_local,
+            R.drawable.ic_tab_lan,
+            R.drawable.ic_tab_emby
+        )
+        // 图标与文字共用选中状态，避免图标一直保持未选中灰色。
+        binding.tabLayout.tabIconTint = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()),
+            intArrayOf(
+                ContextCompat.getColor(this, R.color.primary),
+                ContextCompat.getColor(this, R.color.on_surface_variant)
+            )
+        )
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             tab.text = tabTitles[position]
+            tab.icon = ContextCompat.getDrawable(this, tabIcons[position])
         }.attach()
     }
 

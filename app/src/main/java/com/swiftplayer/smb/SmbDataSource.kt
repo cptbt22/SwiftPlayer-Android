@@ -184,8 +184,8 @@ class SmbConnectionProvider(private val server: SmbServer) {
             .withReadTimeout(12, TimeUnit.SECONDS)
             .build()
         client = SMBClient(config)
-        val (host, port) = parseHostPort(server.address)
-        connection = client!!.connect(host, port)
+        val endpoint = SmbAddresses.parse(server.address)
+        connection = client!!.connect(endpoint.host, endpoint.port)
         val auth = if (server.username.isNotEmpty()) {
             AuthenticationContext(
                 server.username,
@@ -198,19 +198,6 @@ class SmbConnectionProvider(private val server: SmbServer) {
         session = connection?.authenticate(auth)
     }
 
-    private fun parseHostPort(address: String): Pair<String, Int> {
-        val cleaned = address.removePrefix("smb://").removeSuffix("/")
-        val parts = cleaned.split(":")
-        return if (parts.size == 2) {
-            parts[0] to (parts[1].toIntOrNull() ?: DEFAULT_SMB_PORT)
-        } else {
-            cleaned to DEFAULT_SMB_PORT
-        }
-    }
-
-    companion object {
-        private const val DEFAULT_SMB_PORT = 445
-    }
 }
 
 data class SmbFileHandle(

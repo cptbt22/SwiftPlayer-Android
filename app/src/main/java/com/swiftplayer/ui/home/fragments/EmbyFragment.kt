@@ -830,13 +830,45 @@ class EmbyFragment : Fragment() {
         lifecycleScope.launch {
             val result = repository.ping(address)
             if (!isAdded || _binding == null) return@launch
-            testButton.isEnabled = true
             if (result.isSuccess) {
+                testButton.isEnabled = true
                 toast(getString(R.string.emby_test_ok))
             } else {
-                toast(result.exceptionOrNull()?.message ?: getString(R.string.emby_test_failed))
+                testButton.text = "诊断中…"
+                val detail = repository.diagnose(address)
+                if (!isAdded || _binding == null) return@launch
+                testButton.isEnabled = true
+                testButton.text = "测试连接"
+                showDiagnoseDialog(address, result.exceptionOrNull()?.message, detail)
             }
         }
+    }
+
+    /** 连接失败时展示分层诊断结果，便于一次定位是 DNS、IPv6 还是端口问题 */
+    private fun showDiagnoseDialog(address: String, error: String?, detail: String) {
+        val body = buildString {
+            if (!error.isNullOrBlank()) append(error).append("\n\n")
+            append(detail)
+        }
+        val textView = android.widget.TextView(requireContext()).apply {
+            text = body
+            setTextIsSelectable(true)
+            setPadding(44, 28, 44, 12)
+            textSize = 12f
+            typeface = android.graphics.Typeface.MONOSPACE
+        }
+        val scroll = android.widget.ScrollView(requireContext()).apply { addView(textView) }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("连接诊断 · $address")
+            .setView(scroll)
+            .setPositiveButton("关闭", null)
+            .setNeutralButton("复制") { _, _ ->
+                val cm = requireContext()
+                    .getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("emby-diag", body))
+                toast("诊断信息已复制")
+            }
+            .show()
     }
 
     private fun confirmDeleteServer(server: EmbyServer) {

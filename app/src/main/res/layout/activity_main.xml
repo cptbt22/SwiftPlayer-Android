@@ -92,6 +92,7 @@
                 android:padding="4dp"
                 app:tabMode="fixed"
                 app:tabGravity="fill"
+                app:tabInlineLabel="true"
                 app:tabIndicatorHeight="0dp"
                 app:tabSelectedTextColor="@color/primary"
                 app:tabTextColor="@color/on_surface_variant"

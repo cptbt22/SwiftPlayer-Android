@@ -32,10 +32,22 @@
     volatile <fields>;
 }
 
-# SMBJ transitive dependencies - not available on Android
+# SMBJ / MBassador：SMBClient 通过 MBassador 发布连接事件。
+# MBassador 在运行时读取 @Handler 注解，并反射创建 ReflectiveHandlerInvocation。
+# R8 若混淆注解成员或删除 invocation 默认值，会在 TCP 连接前抛出
+# "The provided handler invocation did not specify ..."，必须完整保留其运行时元数据。
+-keep class net.engio.mbassy.** { *; }
+-keep interface net.engio.mbassy.** { *; }
+-keep enum net.engio.mbassy.** { *; }
+-keepclassmembers class * {
+    @net.engio.mbassy.listener.Handler <methods>;
+}
+-keepattributes RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault,Signature,InnerClasses,EnclosingMethod
+-dontwarn net.engio.mbassy.**
+
+# SMBJ 的其他可选依赖在 Android 上不使用
 -dontwarn javax.el.**
 -dontwarn org.ietf.jgss.**
--dontwarn net.engio.mbassy.**
 
 # Bouncy Castle (used by smbj)
 -dontwarn org.bouncycastle.**

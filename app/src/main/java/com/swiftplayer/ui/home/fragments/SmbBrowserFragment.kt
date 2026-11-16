@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.swiftplayer.MainActivity
 import com.swiftplayer.R
+import com.swiftplayer.data.local.SmbServerStore
 import com.swiftplayer.data.model.SmbServer
 import com.swiftplayer.databinding.DialogAddServerBinding
 import com.swiftplayer.databinding.FragmentSmbBrowserBinding
@@ -39,10 +40,13 @@ class SmbBrowserFragment : Fragment() {
     private lateinit var serverAdapter: SmbServerAdapter
     private val smbClient = SmbClient()
     private val discoveryService by lazy { LanDiscoveryService(requireContext()) }
+    private val serverStore by lazy { SmbServerStore(requireContext()) }
     private var currentServer: SmbServer? = null
+    private var savedServer: SmbServer? = null
     private var currentPath = ""
     private var isBrowsing = false
     private var discoveredServers = mutableListOf<SmbServer>()
+    private var statusToast: Toast? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -58,6 +62,9 @@ class SmbBrowserFragment : Fragment() {
         setupRecyclerViews()
         setupFab()
         setupSwipeRefresh()
+        savedServer = serverStore.load()
+        savedServer?.let { discoveredServers.add(it) }
+        showServerList()
         startDiscovery()
     }
 
@@ -79,7 +86,15 @@ class SmbBrowserFragment : Fragment() {
         }
 
         serverAdapter = SmbServerAdapter(
-            onServerClick = { server -> connectToServer(server) },
+            onServerClick = { server ->
+                // 新发现的主机没有凭据，先让用户填写；避免匿名尝试失败后才弹框，
+                // 同时避免「连接中…」Toast 与登录框叠在一起。
+                if (server.username.isNotBlank() || server.password.isNotBlank()) {
+                    connectToServer(server)
+                } else {
+                    showAddServerDialog(server)
+                }
+            },
             onAddClick = { showAddServerDialog() }
         )
 
@@ -142,13 +157,15 @@ class SmbBrowserFragment : Fragment() {
 
                 override fun onDiscoveryFinished(servers: List<SmbServer>) {
                     if (!isAdded || _binding == null) return
+                    val saved = savedServer
                     discoveredServers.clear()
-                    discoveredServers.addAll(servers)
+                    if (saved != null) discoveredServers.add(saved)
+                    discoveredServers.addAll(servers.filter { it.address != saved?.address })
                     binding.loadingBar.visibility = View.GONE
                     if (!isBrowsing) {
                         showServerList()
                     }
-                    if (servers.isEmpty()) {
+                    if (discoveredServers.isEmpty()) {
                         binding.emptyView.visibility = View.VISIBLE
                     }
                 }
@@ -175,11 +192,36 @@ class SmbBrowserFragment : Fragment() {
         binding.emptyView.visibility = if (discoveredServers.isEmpty()) View.VISIBLE else View.GONE
     }
 
-    private fun showAddServerDialog() {
+    private fun showAddServerDialog(
+        initialServer: SmbServer? = null,
+        errorMessage: String? = null
+    ) {
+        hideStatusToast()
         val dialogBinding = DialogAddServerBinding.inflate(layoutInflater)
+        initialServer?.let { server ->
+            dialogBinding.etName.setText(server.name)
+            dialogBinding.etAddress.setText(server.address)
+            dialogBinding.etShare.setText(server.shareName)
+            dialogBinding.etUsername.setText(server.username)
+            dialogBinding.etPassword.setText(server.password)
+            dialogBinding.etPassword.setSelection(dialogBinding.etPassword.text?.length ?: 0)
+        }
+        if (errorMessage.isNullOrBlank()) {
+            dialogBinding.tvDialogMessage.setText(R.string.smb_login_hint)
+            dialogBinding.tvDialogMessage.setTextColor(
+                ContextCompat.getColor(requireContext(), R.color.on_surface_variant)
+            )
+        } else {
+            dialogBinding.tvDialogMessage.text = errorMessage
+            dialogBinding.tvDialogMessage.setTextColor(
+                ContextCompat.getColor(requireContext(), R.color.error)
+            )
+        }
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.add_server)
+            .setTitle(
+                if (initialServer == null) R.string.add_server else R.string.smb_connect_title
+            )
             .setView(dialogBinding.root)
             .setPositiveButton(R.string.connect) { _, _ ->
                 val name = dialogBinding.etName.text.toString().trim()
@@ -187,17 +229,42 @@ class SmbBrowserFragment : Fragment() {
                     .removePrefix("smb://").removeSuffix("/")
                 val share = dialogBinding.etShare.text.toString().trim().trim('/')
                 val username = dialogBinding.etUsername.text.toString().trim()
-                val password = dialogBinding.etPassword.text.toString().trim()
+                val password = dialogBinding.etPassword.text.toString()
 
-                if (address.isNotEmpty()) {
-                    val server = SmbServer(
-                        name = name.ifEmpty { address },
-                        address = address,
-                        shareName = share,
-                        username = username,
-                        password = password
+                if (address.isEmpty()) {
+                    showAddServerDialog(
+                        initialServer = initialServer,
+                        errorMessage = getString(R.string.smb_address_required)
                     )
-                    connectToServer(server)
+                    return@setPositiveButton
+                }
+                val server = SmbServer(
+                    name = name.ifEmpty { address },
+                    address = address,
+                    shareName = share,
+                    username = username,
+                    password = password
+                )
+                if (username.isEmpty()) {
+                    showAddServerDialog(
+                        initialServer = server,
+                        errorMessage = getString(R.string.smb_credentials_required)
+                    )
+                    return@setPositiveButton
+                }
+                connectToServer(server)
+            }
+            .setNeutralButton(R.string.smb_connect_anonymous) { _, _ ->
+                val address = dialogBinding.etAddress.text.toString().trim()
+                    .removePrefix("smb://").removeSuffix("/")
+                if (address.isNotEmpty()) {
+                    connectToServer(
+                        SmbServer(
+                            name = dialogBinding.etName.text.toString().trim().ifEmpty { address },
+                            address = address,
+                            shareName = dialogBinding.etShare.text.toString().trim().trim('/')
+                        )
+                    )
                 }
             }
             .setNegativeButton(R.string.cancel, null)
@@ -214,14 +281,17 @@ class SmbBrowserFragment : Fragment() {
                 if (!isAdded || _binding == null) return@launch
                 binding.loadingBar.visibility = View.VISIBLE
                 binding.emptyView.visibility = View.GONE
-                Toast.makeText(context, R.string.connecting, Toast.LENGTH_SHORT).show()
+                showStatusToast(getString(R.string.connecting))
 
                 val connectResult = smbClient.connect(server)
                 if (!isAdded || _binding == null) return@launch
                 connectResult
                     .onFailure { e ->
                         binding.loadingBar.visibility = View.GONE
-                        toast(e.message ?: getString(R.string.connection_failed))
+                        showAddServerDialog(
+                            server,
+                            e.message ?: getString(R.string.connection_failed)
+                        )
                         return@launch
                     }
 
@@ -231,17 +301,25 @@ class SmbBrowserFragment : Fragment() {
                     .onSuccess { share ->
                         val connected = server.copy(shareName = share)
                         currentServer = connected
+                        savedServer = connected
+                        serverStore.save(connected)
+                        discoveredServers.removeAll { it.address == connected.address }
+                        discoveredServers.add(0, connected)
+                        hideStatusToast()
                         toast(getString(R.string.smb_connected_share, share))
                         browseShare(connected, "/")
                     }
                     .onFailure { e ->
                         binding.loadingBar.visibility = View.GONE
-                        toast(e.message ?: getString(R.string.smb_no_shares_found))
+                        showAddServerDialog(
+                            server,
+                            e.message ?: getString(R.string.smb_no_shares_found)
+                        )
                     }
             } catch (e: Exception) {
                 if (!isAdded) return@launch
                 binding.loadingBar.visibility = View.GONE
-                toast("连接失败: ${e.message}")
+                showAddServerDialog(server, "连接失败：${e.message.orEmpty()}")
             }
         }
     }
@@ -314,12 +392,24 @@ class SmbBrowserFragment : Fragment() {
         }
     }
 
+    private fun showStatusToast(message: String) {
+        hideStatusToast()
+        statusToast = Toast.makeText(context, message, Toast.LENGTH_SHORT).also { it.show() }
+    }
+
+    private fun hideStatusToast() {
+        statusToast?.cancel()
+        statusToast = null
+    }
+
     private fun toast(message: String) {
+        hideStatusToast()
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        hideStatusToast()
         discoveryService.stop()
         smbClient.disconnect()
         _binding = null
