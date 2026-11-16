@@ -8,6 +8,8 @@
 
 *A native Android player for self-hosted home theater — no spinner when you seek. Local files, SMB (fnOS / Synology) and Emby in one app.*
 
+*[English](README.en.md) · 中文*
+
 ![License](https://img.shields.io/badge/License-GPL--3.0-blue)
 ![Platform](https://img.shields.io/badge/Platform-Android%207.0%2B-green)
 ![Kotlin](https://img.shields.io/badge/Kotlin-1.9+-purple)
