@@ -89,7 +89,7 @@ Useful for unsubtitled foreign films, series and documentaries. One toggle in th
 
 | Version | Size | Requires | Link |
 |---|---|---|---|
-| **Latest** (v2.5.6) | 5.8 MB | Android 7.0+ | **[GitHub Releases](https://github.com/cptbt22/SwiftPlayer-Android/releases/latest)** |
+| **Latest** | 5.8 MB | Android 7.0+ | **[GitHub Releases](https://github.com/cptbt22/SwiftPlayer-Android/releases/latest)** |
 
 - All builds share the same signing key, so updates install straight over the previous version — no uninstall needed.
 - Android will ask you to allow installs from unknown sources the first time.

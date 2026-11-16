@@ -29,7 +29,7 @@
 
 | 版本 | 大小 | 要求 | 下载 |
 |---|---|---|---|
-| **最新版**（v2.5.6） | 5.8 MB | Android 7.0+ | **[前往 Releases 下载](https://github.com/cptbt22/SwiftPlayer-Android/releases/latest)** |
+| **最新版** | 5.8 MB | Android 7.0+ | **[前往 Releases 下载](https://github.com/cptbt22/SwiftPlayer-Android/releases/latest)** |
 | v2.5.2 | 5.8 MB | Android 7.0+ | [SwiftPlayer-v2.5.2.apk](https://github.com/cptbt22/SwiftPlayer-Android/releases/download/v2.5.2/SwiftPlayer-v2.5.2.apk) |
 
 - 各版本**签名一致**，后续版本可直接覆盖升级，无需卸载。
@@ -166,6 +166,7 @@ SwiftPlayer 用 **Kotlin + Media3 原生实现**，直接对症：**拖动进度
 
 ## 更新日志
 
+- **v2.5.7** — 封面加载复用同一套 DoH 解析（系统 DNS 失效时封面不再成片空白）；DNS 结果带缓存，连续加载更快
 - **v2.5.6** — Emby 内建 DoH 解析（系统 DNS 返回空结果时自动回退）；连接失败改为弹出分层诊断（A/AAAA 记录、逐地址 TCP 耗时、HTTP 状态）
 - **v2.5.2** — 海报布局修复、分类筛选修复、观看历史、竖屏播放
 - **v2.5.1** — 首个开源版本

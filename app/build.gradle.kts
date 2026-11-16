@@ -39,8 +39,8 @@ android {
         applicationId = "com.swiftplayer"
         minSdk = 24
         targetSdk = 35
-        versionCode = 15
-        versionName = "2.5.6"
+        versionCode = 16
+        versionName = "2.5.7"
     }
 
     buildTypes {
@@ -110,6 +110,7 @@ dependencies {
 
     // Image loading
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation("com.github.bumptech.glide:okhttp3-integration:4.16.0")
 
     // ViewPager2 (for tab navigation)
     implementation("androidx.viewpager2:viewpager2:1.1.0")

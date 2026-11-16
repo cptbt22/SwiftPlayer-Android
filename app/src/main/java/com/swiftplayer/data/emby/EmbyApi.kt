@@ -1,15 +1,13 @@
 package com.swiftplayer.data.emby
 
 import com.swiftplayer.BuildConfig
+import com.swiftplayer.data.net.DnsProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Dns
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.dnsoverhttps.DnsOverHttps
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
@@ -37,44 +35,8 @@ class EmbyApiException(message: String) : Exception(message)
  */
 class EmbyApi(private val deviceId: String) {
 
-    /** 引导客户端：只用于连接 DoH 服务器，不含自定义 DNS，避免递归 */
-    private val bootstrapClient = OkHttpClient.Builder()
-        .connectTimeout(6, TimeUnit.SECONDS)
-        .readTimeout(6, TimeUnit.SECONDS)
-        .build()
-
-    /**
-     * DoH（DNS over HTTPS，阿里公共 DNS）。
-     * bootstrapDnsHosts 使用 IP 字面量引导，因此系统 DNS 完全解析不出域名时依然可用。
-     */
-    private val dohDns: DnsOverHttps = DnsOverHttps.Builder()
-        .client(bootstrapClient)
-        .url("https://dns.alidns.com/dns-query".toHttpUrl())
-        .bootstrapDnsHosts(
-            InetAddress.getByName("223.5.5.5"),
-            InetAddress.getByName("223.6.6.6")
-        )
-        .build()
-
-    /** 系统 DNS 优先；解析失败或返回空时自动回退 DoH */
-    private val smartDns = object : Dns {
-        override fun lookup(hostname: String): List<InetAddress> {
-            val system = try {
-                Dns.SYSTEM.lookup(hostname)
-            } catch (_: Exception) {
-                emptyList()
-            }
-            if (system.isNotEmpty()) return system
-            return try {
-                dohDns.lookup(hostname)
-            } catch (_: Exception) {
-                emptyList()
-            }
-        }
-    }
-
     private val client = OkHttpClient.Builder()
-        .dns(smartDns)
+        .dns(DnsProvider.smart)
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
@@ -129,7 +91,7 @@ class EmbyApi(private val deviceId: String) {
         if (addrs.isEmpty()) {
             sb.append("系统 DNS 无结果，尝试 DoH (alidns) …").append('\n')
             addrs = try {
-                dohDns.lookup(host)
+                DnsProvider.lookupOverDoh(host)
             } catch (e: Exception) {
                 sb.append("DoH 解析失败  [").append(e.javaClass.simpleName).append("] ").append(e.message).append('\n')
                 emptyList()
