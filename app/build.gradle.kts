@@ -39,8 +39,8 @@ android {
         applicationId = "com.swiftplayer"
         minSdk = 24
         targetSdk = 35
-        versionCode = 16
-        versionName = "2.5.7"
+        versionCode = 17
+        versionName = "2.5.8"
     }
 
     buildTypes {

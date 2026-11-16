@@ -1,5 +1,6 @@
 package com.swiftplayer.data.emby
 
+import com.swiftplayer.data.net.DnsProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,6 +34,7 @@ class EmbyPlaybackSync(
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
     private val client = OkHttpClient.Builder()
+        .dns(DnsProvider.smart)
         .connectTimeout(2, TimeUnit.SECONDS)
         .readTimeout(3, TimeUnit.SECONDS)
         .writeTimeout(3, TimeUnit.SECONDS)

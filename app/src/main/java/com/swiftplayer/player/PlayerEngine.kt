@@ -16,9 +16,11 @@ import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import com.swiftplayer.data.model.SmbServer
+import com.swiftplayer.data.net.DnsProvider
 import com.swiftplayer.smb.SmbConnectionProvider
 import com.swiftplayer.smb.SmbDataSource
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /**
  * 播放引擎封装
@@ -34,7 +36,19 @@ class PlayerEngine(private val context: Context) {
     private var smbServer: SmbServer? = null
     private var smbProvider: SmbConnectionProvider? = null
 
-    private val okHttpClient: OkHttpClient by lazy { OkHttpClient.Builder().build() }
+    /**
+     * 视频流与 API 共用同一套 DNS 解析（系统 DNS 优先、失败回退 DoH）。
+     * 不配 dns 的话，Emby 域名在部分网络上解析不出地址，播放会直接失败——
+     * 封面空白只是看不了图，这里会直接黑屏。
+     * 超时比 API 放宽：视频是大块连续读，弱网下 10s 建连不够。
+     */
+    private val okHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .dns(DnsProvider.smart)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
 
     /**
      * 网络缓冲策略：
