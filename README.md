@@ -2,9 +2,11 @@
 
 # SwiftPlayer for Android
 
-**为自建 NAS 家庭影院打造的 Android 播放器 —— 本地 · SMB（飞牛 NAS）· Emby 三合一**
+**拖动进度条不转圈的 NAS 播放器。**
 
-*A self-hosted-home-theater video player for Android: local files, SMB (incl. fnOS NAS) and Emby in one app.*
+本地 · SMB（飞牛 fnOS / 群晖）· Emby 三合一，Kotlin + Media3 原生实现，一只拇指看完一部电影。
+
+*A native Android player for self-hosted home theater — no spinner when you seek. Local files, SMB (fnOS / Synology) and Emby in one app.*
 
 ![License](https://img.shields.io/badge/License-GPL--3.0-blue)
 ![Platform](https://img.shields.io/badge/Platform-Android%207.0%2B-green)
@@ -25,7 +27,7 @@
 
 | 版本 | 大小 | 要求 | 下载 |
 |---|---|---|---|
-| **v2.5.6**（最新） | 5.8 MB | Android 7.0+ | **[SwiftPlayer-v2.5.6.apk](https://github.com/cptbt22/SwiftPlayer-Android/releases/download/v2.5.6/SwiftPlayer-v2.5.6.apk)** |
+| **最新版**（v2.5.6） | 5.8 MB | Android 7.0+ | **[前往 Releases 下载](https://github.com/cptbt22/SwiftPlayer-Android/releases/latest)** |
 | v2.5.2 | 5.8 MB | Android 7.0+ | [SwiftPlayer-v2.5.2.apk](https://github.com/cptbt22/SwiftPlayer-Android/releases/download/v2.5.2/SwiftPlayer-v2.5.2.apk) |
 
 - 各版本**签名一致**，后续版本可直接覆盖升级，无需卸载。
@@ -48,7 +50,7 @@
 | NAS 自带的影视播放 | 外网拖动进度缓冲长，转圈等待 |
 | Emby / Jellyfin 的第三方客户端 | 多为 WebView 套壳，手势与 seek 手感差 |
 | MX Player / VLC 等本地播放器 | 只管本地文件，不认 SMB 共享与 Emby 媒体库 |
-| Emby 官方 Android 客户端 | 闭源 |
+| Emby 官方 Android 客户端 | 手势以点按为主，没有渐进式 seek 与"松手才提交"的策略 |
 
 SwiftPlayer 用 **Kotlin + Media3 原生实现**，直接对症：**拖动进度条不转圈**。同时把 **本地硬盘 / 局域网 SMB 共享 / Emby 媒体库** 装进同一个 App：**一只拇指完成快进、倍速、亮度、音量**；Emby 的演员、收藏、搜索、进度深度打通——手机上看一半，回客厅电视上同一秒续播；SMB 连不上时告诉你**为什么**，而不是甩一句"连接失败"。
 
@@ -133,6 +135,40 @@ SwiftPlayer 用 **Kotlin + Media3 原生实现**，直接对症：**拖动进度
 - Emby 服务器 4.x（演员/类型浏览需刮削元数据）
 - SMB 服务器需开启 SMB2/3（飞牛 fnOS：文件管理 → SMB）
 - 语音转字幕依赖系统语音识别服务
+
+## 常见问题
+
+**Q：Emby 连不上，提示「无法连接到服务器，请检查地址与网络」？**
+
+点「测试连接」会弹出分层诊断，直接看断在哪一层：
+
+| 诊断结果 | 含义 | 怎么办 |
+|---|---|---|
+| `DNS 解析失败` | 域名只发布了 IPv6 记录（AAAA），当前网络给不出这类记录 | v2.5.6 起内建 DoH，会自动改用阿里公共 DNS 重查；仍失败说明当前网络到 NAS 的 IPv6 通路不通 |
+| `TCP 超时` | 地址解析到了但没响应 | 多为端口未放行，或所在网络没有 IPv6 出口 |
+| `HTTP 401` | 地址通，账号或密码不对 | 核对凭据 |
+| `HTTP 200` 但列表空 | 链路正常，媒体库没内容或未刮削 | 检查 Emby 库设置 |
+
+**Q：拖进度条还是转圈？**
+
+- **经由 Emby**：视频走服务端转码流，快进要服务端重新切片。建议添加服务器时填上**局域网地址**——在家会自动直连内网（60s TTL 探测，1.5s 超时），绕开外网带宽。
+- **经由 SMB**：确认 NAS 端已开 SMB2/3。本项目的随机读取靠"复用连接、只重开文件句柄"实现，若服务端强制断连会退化。
+
+**Q：SMB 一直连不上？**
+
+先在飞牛「文件管理 → SMB」确认服务已开启、共享目录已勾选、账号有权限。**共享名可以留空**，App 会自动识别。连接失败会给出中文归因（服务未开启 / 账号错误 / 无权限 / 共享不存在），并附排查指引。
+
+**Q：安装提示签名冲突？**
+
+从 Releases 下载官方包，各版本签名一致，可直接覆盖升级。若此前装过其他来源的构建（debug 签名），需先卸载再装。
+
+## 更新日志
+
+- **v2.5.6** — Emby 内建 DoH 解析（系统 DNS 返回空结果时自动回退）；连接失败改为弹出分层诊断（A/AAAA 记录、逐地址 TCP 耗时、HTTP 状态）
+- **v2.5.2** — 海报布局修复、分类筛选修复、观看历史、竖屏播放
+- **v2.5.1** — 首个开源版本
+
+完整历史见 [Releases](https://github.com/cptbt22/SwiftPlayer-Android/releases)。
 
 ## 构建
 
